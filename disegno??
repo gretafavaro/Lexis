@@ -1,0 +1,32 @@
+
+library(tidyverse)
+library(HMDHFDplus)
+library(tidycensus)
+library(ggplot2)
+#registrarsi
+#https://www.mortality.org/Home/Index
+mypassword <-"Password04!"
+myusername <-"greta.favaro04@gmail.com"
+UShmd<- readHMDweb(CNTRY = "FRATNP", item ="fltper_5x5", password =mypassword,username = myusername)
+
+us_mort<-UShmd%>%
+  filter(Year == 2015)
+
+#average qx and lx for ages 0 to 1 and 1 to 4
+us_mort$qx[us_mort$Age==0]<-us_mort$qx[us_mort$Age==0]+us_mort$qx[us_mort$Age==1]
+us_mort$Lx[us_mort$Age==0]<-us_mort$Lx[us_mort$Age==0]+us_mort$Lx[us_mort$Age==1]
+
+us_mort<-us_mort[-2,]
+
+UShfd<-readHFDweb(CNTRY="USA",username = myusername,password =mypassword, item = "asfrRR")
+#30
+us_fert<-UShfd%>%
+  filter(Year==2015)%>%
+  mutate(age_grp = cut(Age, breaks = seq(10, 55, 5), include.lowest = T))%>%
+  group_by(age_grp)%>%
+  summarise(asfr5 = sum(ASFR))%>%
+  filter(is.na(age_grp)==F)%>%
+  ungroup()
+
+census_api_key("2601cdb7c64b94809b267b34854b1889a0c4bd8d")
+us_popn<-get_estimates(geography="us", product = "characteristics", breakdown = c("AGEGROUP", "SEX"), year = 2015)
